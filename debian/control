@@ -39,7 +39,7 @@ Homepage: http://www.openstack.org/
 
 Package: python-futurist
 Architecture: all
-Depends: python-concurrent.futures (>= 3.0)
+Depends: python-concurrent.futures (>= 3.0),
          python-contextlib2,
          python-monotonic,
          python-pbr (>= 0.11),
