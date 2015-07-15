@@ -40,7 +40,7 @@ endif
 
 override_dh_sphinxdoc:
 ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
-	sphinx-build -b html doc debian/python-futurist-doc/usr/share/doc/python-futurist-doc/html
+	sphinx-build -b html doc/source debian/python-futurist-doc/usr/share/doc/python-futurist-doc/html
 	dh_sphinxdoc -O--buildsystem=python_distutils
 endif
 
