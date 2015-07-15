@@ -1,0 +1,9 @@
+Document: python-futurist-doc
+Title: futurist Documentation
+Author: N/A
+Abstract: Sphinx documentation for futurist
+Section: Programming/Python
+
+Format: HTML
+Index: /usr/share/doc/python-futurist-doc/html/index.html
+Files: /usr/share/doc/python-futurist-doc/html/*
