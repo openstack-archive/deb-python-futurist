@@ -6,6 +6,7 @@ python-futurist (0.5.0-1) UNRELEASED; urgency=medium
 
   [ Corey Bryant ]
   * New upstream release.
+  * Align dependencies with upstream.
 
  -- Corey Bryant <corey.bryant@canonical.com>  Thu, 01 Oct 2015 19:34:03 -0400
 
