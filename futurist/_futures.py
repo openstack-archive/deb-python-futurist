@@ -36,15 +36,37 @@ except ImportError:
 from futurist import _utils
 
 
+class RejectedSubmission(Exception):
+    """Exception raised when a submitted call is rejected (for some reason)."""
+
+
 # NOTE(harlowja): Allows for simpler access to this type...
 Future = _futures.Future
 
 
+class _Threading(object):
+
+    @staticmethod
+    def event_object(*args, **kwargs):
+        return threading.Event(*args, **kwargs)
+
+    @staticmethod
+    def lock_object(*args, **kwargs):
+        return threading.Lock(*args, **kwargs)
+
+    @staticmethod
+    def rlock_object(*args, **kwargs):
+        return threading.RLock(*args, **kwargs)
+
+    @staticmethod
+    def condition_object(*args, **kwargs):
+        return threading.Condition(*args, **kwargs)
+
+
 class _Gatherer(object):
-    def __init__(self, submit_func,
-                 lock_cls=threading.Lock, start_before_submit=False):
+    def __init__(self, submit_func, lock_factory, start_before_submit=False):
         self._submit_func = submit_func
-        self._stats_lock = lock_cls()
+        self._stats_lock = lock_factory()
         self._stats = ExecutorStatistics()
         self._start_before_submit = start_before_submit
 
@@ -108,17 +130,44 @@ class ThreadPoolExecutor(_thread.ThreadPoolExecutor):
 
     See: https://docs.python.org/dev/library/concurrent.futures.html
     """
-    def __init__(self, max_workers=None):
+
+    threading = _Threading()
+
+    def __init__(self, max_workers=None, check_and_reject=None):
+        """Initializes a thread pool executor.
+
+        :param max_workers: maximum number of workers that can be
+                            simulatenously active at the same time, further
+                            submitted work will be queued up when this limit
+                            is reached.
+        :type max_workers: int
+        :param check_and_reject: a callback function that will be provided
+                                 two position arguments, the first argument
+                                 will be this executor instance, and the second
+                                 will be the number of currently queued work
+                                 items in this executors backlog; the callback
+                                 should raise a :py:class:`.RejectedSubmission`
+                                 exception if it wants to have this submission
+                                 rejected.
+        :type check_and_reject: callback
+        """
         if max_workers is None:
             max_workers = _utils.get_optimal_thread_count()
         super(ThreadPoolExecutor, self).__init__(max_workers=max_workers)
         if self._max_workers <= 0:
             raise ValueError("Max workers must be greater than zero")
+        # NOTE(harlowja): this replaces the parent classes non-reentrant lock
+        # with a reentrant lock so that we can correctly call into the check
+        # and reject lock, and that it will block correctly if another
+        # submit call is done during that...
+        self._shutdown_lock = threading.RLock()
+        self._check_and_reject = check_and_reject or (lambda e, waiting: None)
         self._gatherer = _Gatherer(
             # Since our submit will use this gatherer we have to reference
             # the parent submit, bound to this instance (which is what we
             # really want to use anyway).
-            super(ThreadPoolExecutor, self).submit)
+            super(ThreadPoolExecutor, self).submit,
+            self.threading.lock_object)
 
     @property
     def statistics(self):
@@ -132,7 +181,12 @@ class ThreadPoolExecutor(_thread.ThreadPoolExecutor):
 
     def submit(self, fn, *args, **kwargs):
         """Submit some work to be executed (and gather statistics)."""
-        return self._gatherer.submit(fn, *args, **kwargs)
+        with self._shutdown_lock:
+            if self._shutdown:
+                raise RuntimeError('Can not schedule new futures'
+                                   ' after being shutdown')
+            self._check_and_reject(self, self._work_queue.qsize())
+            return self._gatherer.submit(fn, *args, **kwargs)
 
 
 class ProcessPoolExecutor(_process.ProcessPoolExecutor):
@@ -142,6 +196,9 @@ class ProcessPoolExecutor(_process.ProcessPoolExecutor):
 
     See: https://docs.python.org/dev/library/concurrent.futures.html
     """
+
+    threading = _Threading()
+
     def __init__(self, max_workers=None):
         if max_workers is None:
             max_workers = _utils.get_optimal_thread_count()
@@ -152,7 +209,8 @@ class ProcessPoolExecutor(_process.ProcessPoolExecutor):
             # Since our submit will use this gatherer we have to reference
             # the parent submit, bound to this instance (which is what we
             # really want to use anyway).
-            super(ProcessPoolExecutor, self).submit)
+            super(ProcessPoolExecutor, self).submit,
+            self.threading.lock_object)
 
     @property
     def alive(self):
@@ -194,6 +252,31 @@ class _WorkItem(object):
             self.future.set_result(result)
 
 
+if _utils.EVENTLET_AVAILABLE:
+
+    class _GreenThreading(object):
+
+        @staticmethod
+        def event_object(*args, **kwargs):
+            return greenthreading.Event(*args, **kwargs)
+
+        @staticmethod
+        def lock_object(*args, **kwargs):
+            return greenthreading.Lock(*args, **kwargs)
+
+        @staticmethod
+        def rlock_object(*args, **kwargs):
+            return greenthreading.RLock(*args, **kwargs)
+
+        @staticmethod
+        def condition_object(*args, **kwargs):
+            return greenthreading.Condition(*args, **kwargs)
+
+    _green_threading = _GreenThreading()
+else:
+    _green_threading = None
+
+
 class SynchronousExecutor(_futures.Executor):
     """Executor that uses the caller to execute calls synchronously.
 
@@ -204,6 +287,8 @@ class SynchronousExecutor(_futures.Executor):
 
     It gathers statistics about the submissions executed for post-analysis...
     """
+
+    threading = _Threading()
 
     def __init__(self, green=False):
         """Synchronous executor constructor.
@@ -218,14 +303,13 @@ class SynchronousExecutor(_futures.Executor):
                                ' synchronous executor')
         self._shutoff = False
         if green:
-            lock_cls = greenthreading.Lock
+            self.threading = _green_threading
             self._future_cls = GreenFuture
         else:
-            lock_cls = threading.Lock
             self._future_cls = Future
         self._gatherer = _Gatherer(self._submit,
-                                   start_before_submit=True,
-                                   lock_cls=lock_cls)
+                                   self.threading.lock_object,
+                                   start_before_submit=True)
 
     @property
     def alive(self):
@@ -315,7 +399,26 @@ class GreenThreadPoolExecutor(_futures.Executor):
     It gathers statistics about the submissions executed for post-analysis...
     """
 
-    def __init__(self, max_workers=1000):
+    threading = _green_threading
+
+    def __init__(self, max_workers=1000, check_and_reject=None):
+        """Initializes a green thread pool executor.
+
+        :param max_workers: maximum number of workers that can be
+                            simulatenously active at the same time, further
+                            submitted work will be queued up when this limit
+                            is reached.
+        :type max_workers: int
+        :param check_and_reject: a callback function that will be provided
+                                 two position arguments, the first argument
+                                 will be this executor instance, and the second
+                                 will be the number of currently queued work
+                                 items in this executors backlog; the callback
+                                 should raise a :py:class:`.RejectedSubmission`
+                                 exception if it wants to have this submission
+                                 rejected.
+        :type check_and_reject: callback
+        """
         if not _utils.EVENTLET_AVAILABLE:
             raise RuntimeError('Eventlet is needed to use a green executor')
         if max_workers <= 0:
@@ -323,10 +426,11 @@ class GreenThreadPoolExecutor(_futures.Executor):
         self._max_workers = max_workers
         self._pool = greenpool.GreenPool(self._max_workers)
         self._delayed_work = greenqueue.Queue()
+        self._check_and_reject = check_and_reject or (lambda e, waiting: None)
         self._shutdown_lock = greenthreading.Lock()
         self._shutdown = False
         self._gatherer = _Gatherer(self._submit,
-                                   lock_cls=greenthreading.Lock)
+                                   self.threading.lock_object)
 
     @property
     def alive(self):
@@ -350,6 +454,7 @@ class GreenThreadPoolExecutor(_futures.Executor):
             if self._shutdown:
                 raise RuntimeError('Can not schedule new futures'
                                    ' after being shutdown')
+            self._check_and_reject(self, self._delayed_work.qsize())
             return self._gatherer.submit(fn, *args, **kwargs)
 
     def _submit(self, fn, *args, **kwargs):

@@ -86,6 +86,79 @@ class TestPeriodics(testscenarios.TestWithScenarios, base.TestCase):
                                      'event_cls': green_threading.Event}}),
     ]
 
+    def _test_strategy(self, schedule_strategy, nows,
+                       last_now, expected_next):
+        nows = list(nows)
+        ev = self.event_cls()
+
+        def now_func():
+            if len(nows) == 1:
+                ev.set()
+                return last_now
+            return nows.pop()
+
+        @periodics.periodic(2, run_immediately=False)
+        def slow_periodic():
+            pass
+
+        callables = [
+            (slow_periodic, None, None),
+        ]
+        worker_kwargs = self.worker_kwargs.copy()
+        worker_kwargs['schedule_strategy'] = schedule_strategy
+        worker_kwargs['now_func'] = now_func
+        w = periodics.PeriodicWorker(callables, **worker_kwargs)
+
+        with self.create_destroy(w.start):
+            ev.wait()
+            w.stop()
+
+        schedule_order = w._schedule._ordering
+        self.assertEqual([(expected_next, 0)], schedule_order)
+
+    def test_last_finished_strategy(self):
+        last_now = 3.2
+        nows = [
+            # Initial schedule building.
+            0,
+            # Worker run loop fetch time (to see how long to wait).
+            2,
+            # Function call start time.
+            2,
+            # Function call end time.
+            3,
+            # Stop.
+            -1,
+        ]
+        nows = list(reversed(nows))
+        self._test_strategy('last_finished', nows, last_now, 5.0)
+
+    def test_double_start_fail(self):
+        w = periodics.PeriodicWorker([], **self.worker_kwargs)
+        with self.create_destroy(w.start, allow_empty=True):
+            # Give some time for the thread to start...
+            self.sleep(0.5)
+            # Now ensure we can't start it again...
+            self.assertRaises(RuntimeError, w.start)
+            w.stop()
+
+    def test_last_started_strategy(self):
+        last_now = 3.2
+        nows = [
+            # Initial schedule building.
+            0,
+            # Worker run loop fetch time (to see how long to wait).
+            2,
+            # Function call start time.
+            2,
+            # Function call end time.
+            3,
+            # Stop.
+            -1,
+        ]
+        nows = list(reversed(nows))
+        self._test_strategy('last_started', nows, last_now, 4.0)
+
     def test_aligned_strategy(self):
         last_now = 5.5
         nows = [
@@ -101,35 +174,7 @@ class TestPeriodics(testscenarios.TestWithScenarios, base.TestCase):
             -1,
         ]
         nows = list(reversed(nows))
-        ev = self.event_cls()
-        called_at = []
-
-        def now_func():
-            if len(nows) == 1:
-                ev.set()
-                return last_now
-            return nows.pop()
-
-        @periodics.periodic(2, run_immediately=False)
-        def slow_periodic():
-            called_at.append(list(nows))
-
-        callables = [
-            (slow_periodic, None, None),
-        ]
-        worker_kwargs = self.worker_kwargs.copy()
-        worker_kwargs['schedule_strategy'] = 'aligned_last_finished'
-        worker_kwargs['now_func'] = now_func
-        w = periodics.PeriodicWorker(callables, **worker_kwargs)
-
-        with self.create_destroy(w.start):
-            ev.wait()
-            w.stop()
-
-        schedule_order = w._schedule._ordering
-
-        # Should always be aligned to next time (in this case 6.0)
-        self.assertEqual([(6.0, 0)], schedule_order)
+        self._test_strategy('aligned_last_finished', nows, last_now, 6.0)
 
     def test_add_on_demand(self):
         called = set()
@@ -154,6 +199,54 @@ class TestPeriodics(testscenarios.TestWithScenarios, base.TestCase):
                     w.add(cb, *args, **kwargs)
                 self.sleep(0.1)
             w.stop()
+
+    def test_not_added(self):
+
+        @periodics.periodic(0.5)
+        def no_add_me():
+            pass
+
+        no_add_me._is_periodic = False
+
+        @periodics.periodic(0.5)
+        def add_me():
+            pass
+
+        w = periodics.PeriodicWorker([], **self.worker_kwargs)
+        self.assertEqual(0, len(w))
+        self.assertIsNone(w.add(no_add_me))
+        self.assertEqual(0, len(w))
+
+        self.assertIsNotNone(w.add(add_me))
+        self.assertEqual(1, len(w))
+
+    def test_watcher(self):
+
+        def cb():
+            pass
+
+        callables = [
+            (every_one_sec, (cb,), None),
+            (every_half_sec, (cb,), None),
+        ]
+        executor_factory = lambda: self.executor_cls(**self.executor_kwargs)
+        w = periodics.PeriodicWorker(callables,
+                                     executor_factory=executor_factory,
+                                     **self.worker_kwargs)
+        with self.create_destroy(w.start):
+            self.sleep(2.0)
+            w.stop()
+
+        for watcher in w.iter_watchers():
+            self.assertGreaterEqual(watcher.runs, 1)
+
+        w.reset()
+        for watcher in w.iter_watchers():
+            self.assertEqual(watcher.runs, 0)
+            self.assertEqual(watcher.successes, 0)
+            self.assertEqual(watcher.failures, 0)
+            self.assertEqual(watcher.elapsed, 0)
+            self.assertEqual(watcher.elapsed_waiting, 0)
 
     def test_worker(self):
         called = []
