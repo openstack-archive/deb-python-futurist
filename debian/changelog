@@ -1,4 +1,4 @@
-python-futurist (0.5.0-1) UNRELEASED; urgency=medium
+python-futurist (0.5.0-1) experimental; urgency=medium
 
   [ James Page ]
   * d/rules: Drop use of dpkg-parsechangelog -S to ease backporting to
@@ -8,7 +8,10 @@ python-futurist (0.5.0-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Align dependencies with upstream.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Thu, 01 Oct 2015 19:34:03 -0400
+  [ Thomas Goirand ]
+  * Drop versions already satisfied in Trusty.
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 05 Oct 2015 08:21:43 +0000
 
 python-futurist (0.1.2-1) unstable; urgency=medium
 
