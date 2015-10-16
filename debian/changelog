@@ -1,3 +1,9 @@
+python-futurist (0.5.0-2) unstable; urgency=medium
+
+  * Uploading to unstable.
+
+ -- Thomas Goirand <zigo@debian.org>  Fri, 16 Oct 2015 09:31:19 +0000
+
 python-futurist (0.5.0-1) experimental; urgency=medium
 
   [ James Page ]
