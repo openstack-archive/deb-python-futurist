@@ -2,14 +2,14 @@ Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: futurist
 Source: http://www.openstack.org/
 
-Files: debian/*
-Copyright: (c) 2015, Thomas Goirand <zigo@debian.org>
-License: Apache-2.0
-
 Files: *
-Copyright: (c) 2010-2015, OpenStack Foundation <openstack-dev@lists.openstack.org>
+Copyright: (c) 2010-2016, OpenStack Foundation <openstack-dev@lists.openstack.org>
            (c) 2013-2015, Yahoo INC.
            (c) 2013 Hewlett-Packard Development Company, L.P.
+License: Apache-2.0
+
+Files: debian/*
+Copyright: (c) 2015-2016, Thomas Goirand <zigo@debian.org>
 License: Apache-2.0
 
 License: Apache-2.0

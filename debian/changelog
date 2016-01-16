@@ -1,6 +1,7 @@
 python-futurist (0.9.0-1) experimental; urgency=medium
 
   * New upstream release.
+  * Fixed debian/copyright ordering.
 
  -- Thomas Goirand <zigo@debian.org>  Sat, 16 Jan 2016 03:48:28 +0000
 
