@@ -20,12 +20,38 @@ import sys
 import traceback
 
 from monotonic import monotonic as now  # noqa
+import six
 
 try:
     import eventlet as _eventlet  # noqa
     EVENTLET_AVAILABLE = True
 except ImportError:
     EVENTLET_AVAILABLE = False
+
+
+class WorkItem(object):
+    def __init__(self, future, fn, args, kwargs):
+        self.future = future
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        if not self.future.set_running_or_notify_cancel():
+            return
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except BaseException:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            try:
+                if six.PY2:
+                    self.future.set_exception_info(exc_value, exc_tb)
+                else:
+                    self.future.set_exception(exc_value)
+            finally:
+                del(exc_type, exc_value, exc_tb)
+        else:
+            self.future.set_result(result)
 
 
 class Failure(object):
@@ -79,14 +105,6 @@ def get_callback_name(cb):
         except AttributeError:
             pass
         return ".".join(segments)
-
-
-def reverse_enumerate(items):
-    """Yields (index, item) from given list/tuple in reverse order."""
-    idx = len(items)
-    while idx > 0:
-        yield (idx - 1, items[idx - 1])
-        idx -= 1
 
 
 def get_optimal_thread_count(default=2):
