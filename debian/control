@@ -33,8 +33,8 @@ Build-Depends-Indep: python-concurrent.futures (>= 3.0),
                      subunit (>= 1.1),
                      testrepository,
 Standards-Version: 3.9.6
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-futurist.git
-Vcs-Git: git://anonscm.debian.org/openstack/python-futurist.git
+Vcs-Browser: https://anonscm.debian.org/cgit/openstack/python-futurist.git/
+Vcs-Git: https://anonscm.debian.org/git/openstack/python-futurist.git
 Homepage: http://www.openstack.org/
 
 Package: python-futurist
