@@ -6,6 +6,7 @@ python-futurist (0.13.0-1) experimental; urgency=medium
   [ Thomas Goirand ]
   * New upstream release.
   * Fixed (build-)depends for this release.
+  * Standards-Version: 3.9.7 (no change).
 
  -- Thomas Goirand <zigo@debian.org>  Wed, 02 Mar 2016 13:06:31 +0000
 
