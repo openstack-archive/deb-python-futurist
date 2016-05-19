@@ -5,7 +5,7 @@ PYTHON3S:=$(shell py3versions -vr)
 
 export OSLO_PACKAGE_VERSION=$(shell dpkg-parsechangelog | sed -n -e 's/^Version: //p' | sed -e 's/^[[:digit:]]*://' -e 's/[-].*//')
 
-UPSTREAM_GIT = git://github.com/openstack/futurist.git
+UPSTREAM_GIT := https://github.com/openstack/futurist.git
 -include /usr/share/openstack-pkg-tools/pkgos.make
 
 %:
