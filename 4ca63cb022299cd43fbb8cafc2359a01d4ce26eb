@@ -1,0 +1,9 @@
+Code-Review+2: Dmitry Tantsur <divius.inside@gmail.com>
+Code-Review+2: Ronald Bradford <ronald.bradford@gmail.com>
+Workflow+1: Ronald Bradford <ronald.bradford@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 11 Jul 2016 17:53:58 +0000
+Reviewed-on: https://review.openstack.org/335968
+Project: openstack/deb-python-futurist
+Branch: refs/heads/master

@@ -1,0 +1,10 @@
+Code-Review+2: Joshua Harlow <jxharlow@godaddy.com>
+Code-Review+1: Eric Brown <browne@vmware.com>
+Code-Review+2: Mehdi Abaakouk (sileht) <sileht@redhat.com>
+Workflow+1: Mehdi Abaakouk (sileht) <sileht@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 13 Jul 2016 12:19:45 +0000
+Reviewed-on: https://review.openstack.org/340740
+Project: openstack/deb-python-futurist
+Branch: refs/heads/master

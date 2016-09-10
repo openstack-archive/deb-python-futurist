@@ -1,0 +1,10 @@
+Code-Review+2: Ronald Bradford <ronald.bradford@gmail.com>
+Code-Review+1: Clint Adams <clint@gcfm.net>
+Code-Review+2: Dmitry Tantsur <divius.inside@gmail.com>
+Workflow+1: Dmitry Tantsur <divius.inside@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 29 Mar 2016 09:04:02 +0000
+Reviewed-on: https://review.openstack.org/298390
+Project: openstack/deb-python-futurist
+Branch: refs/heads/master
