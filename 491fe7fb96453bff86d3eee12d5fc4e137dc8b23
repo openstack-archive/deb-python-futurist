@@ -1,0 +1,11 @@
+Code-Review+1: Clint Adams <clint@gcfm.net>
+Code-Review+2: Dmitry Tantsur <divius.inside@gmail.com>
+Code-Review+1: venkatamahesh <Venkata.Kotha@infinite.com>
+Code-Review+2: Davanum Srinivas (dims) <davanum@gmail.com>
+Workflow+1: Davanum Srinivas (dims) <davanum@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 14 Sep 2015 20:05:12 +0000
+Reviewed-on: https://review.openstack.org/223144
+Project: openstack/deb-python-futurist
+Branch: refs/heads/stable/liberty
