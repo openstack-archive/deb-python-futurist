@@ -1,4 +1,4 @@
-python-futurist (0.13.0-3) UNRELEASED; urgency=medium
+python-futurist (0.13.0-3) unstable; urgency=medium
 
   [ Ondřej Nový ]
   * Standards-Version is 3.9.8 now (no change)
